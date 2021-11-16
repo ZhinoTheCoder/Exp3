@@ -1,0 +1,61 @@
+///**** Slider ***///
+int silderValue = 0;
+
+int tapValue = 0;
+int pressureValue = 0;
+
+///**** Joystick ***///
+int xValue = 0 ; // read value of the X axis  
+int yValue = 0 ; // read value of the Y axis 
+int prevYVal = 0;
+const int changeTH = 12;
+int bValue = 0 ; // value of the button reading 
+
+void setup()  
+{ 
+  Serial.begin(9600) ; // Open the serial port
+  pinMode(8,INPUT) ; // Configure Pin 2 as input
+  digitalWrite(8,LOW);
+} 
+
+void loop() 
+{ 
+  // Read analog port values A0
+  silderValue = analogRead(A0);
+
+  tapValue = analogRead(A3);
+  pressureValue = analogRead(A4);
+  
+  // Read analog port values A1 and A2  
+  xValue = analogRead(A1); 
+  yValue = analogRead(A2); 
+  int TempYValue = analogRead(A2); 
+  if((TempYValue - prevYVal) > changeTH || (TempYValue - prevYVal) < -1*changeTH){
+    yValue = TempYValue;
+  }
+  else{
+    yValue = prevYVal;
+  }
+  
+
+  // Read the logic value on pin 2  
+  bValue = digitalRead(8);  
+
+  // We display our data separated by a comma 
+  Serial.print(xValue,DEC);
+  Serial.print(",");
+  Serial.print(yValue,DEC);
+  Serial.print(",");
+  Serial.print(silderValue);
+  Serial.print(",");
+  Serial.print(tapValue);
+  Serial.print(",");
+  Serial.print(pressureValue);
+
+  // We end with a newline character to facilitate subsequent analysis  
+  Serial.print("\n");
+
+  // Small delay before the next measurement  
+  delay(100);
+  prevYVal = yValue;  
+}
