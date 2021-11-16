@@ -1,0 +1,170 @@
+/**
+* Zen Scape.
+*
+* Shows different videos/images based on the data coming in from laptop's serial port
+* Users play with the zen garden and depending on their activity different soothing videos will play on the ipad placed in the middle of the garden
+*/
+
+// import the libraries
+import processing.serial.*; 
+import processing.video.*;
+import processing.sound.*;
+
+// input variables
+int joyStickX;
+int joyStickY;
+int slider;
+int tap;
+int oldTap = 0;
+int pressure;
+
+// The serial port that provides the input
+Serial myPort; 
+
+// output variables
+SoundFile musicFile;
+PImage img;
+Movie myMovies[]  = new Movie[3];;
+
+// Keeping track of video/img playing and duration
+float t0 = 0;
+float t;
+float amp = 1;
+int index;
+float imgx = -1000;
+float imgy = -50;
+
+
+void setup() {
+  //0. Load every file
+  myMovies[0] = new Movie(this, "Zen Garden Opening.mp4");
+  myMovies[1] = new Movie(this, "Slider2.mp4");
+  myMovies[2] = new Movie(this, "Pressure2.mp4");
+  img = loadImage("Joystick.jpg");
+  musicFile = new SoundFile(this, "Dream a Dream - Sayuri Hayashi Egnell.mp3");
+  
+  //1. Prepare the canvas
+  size(1280, 800);
+  background(0);
+  
+  //2. Prepare the serial input port
+  printArray(Serial.list());
+  myPort = new Serial(this, Serial.list()[2], 9600);
+  myPort.clear();
+  myPort.bufferUntil('\n');
+  
+  //3. Play the default video and sound
+  playDefaults();
+}
+
+void draw() {
+
+  //0. Change the video based on the input from serial event
+  decideWhichVideoToPlay();
+  if(!shouldDisplayImage()){
+    playSelectedVideo();
+  }
+  
+  //1. Show the image if Joystick is engaged
+  else{         
+    println("displaying image" + imgx + "|" + imgy);
+    float imgxInc = map(joyStickX, 0, 1024, -25, 25);
+    float imgyInc = map(joyStickY, 0, 1024, -7, 7);
+    
+    float newImgX = imgx + imgxInc;
+    float newImgY = imgy + imgyInc;
+    
+    imgx = min(newImgX, 0);
+    imgy = min(newImgY, 0);
+    
+    //println("Display Img" + imgx);
+    image(img, max(imgx, -2800), max(imgy, -150)); 
+  }
+  
+  //2. Change the volume based on the input from serial event
+  t = millis();
+  if(tap > 10){
+    t0 = millis(); 
+    oldTap = tap;
+  }
+  
+  if(t < t0 + 10000){
+    amp = map(oldTap, 0, 80, 1, 0.2);
+  }
+  else{
+    amp = 1;
+  }
+  println("Volume" + amp);
+  musicFile.amp(amp);
+}
+
+
+void serialEvent(Serial myPort) {
+  String myString = myPort.readStringUntil('\n');
+  if ( myString != null ) {
+    myString = trim(myString); // clean up the incoming string
+    //println(myString);
+    // split and set variables
+    int[] vals = int(splitTokens(myString, ","));
+    joyStickX = vals[0];
+    joyStickY = vals[1] ;
+    tap = vals[2];
+    slider = vals[3];
+    pressure = vals[4];
+  }
+  //myPort.clear();
+  printInputInfo();
+
+}
+
+void movieEvent(Movie m) {
+  m.read();
+}
+
+void playDefaults(){
+  index = 0;
+  musicFile.loop();
+}
+
+void playSelectedVideo(){
+  
+  println("index" + index);
+  if (myMovies[index].available() ) {
+    myMovies[index].read();
+  }
+  
+  image(myMovies[index], 0, 0, width, height);
+  myMovies[index].loop();
+  
+}
+
+void decideWhichVideoToPlay(){ 
+  
+  if (pressure < 250) {//for now
+    index = 2;
+  }
+  else if(slider > 500){
+    index = 1;
+  }
+  else{
+    index = 0;
+  }
+ 
+}
+
+boolean shouldDisplayImage(){
+  boolean displayImg =  false;
+  if(abs(joyStickX - 500) > 150 || abs(joyStickY - 500) > 150){
+    index = 3;
+    displayImg = true;
+  }
+  return displayImg;
+}
+
+void printInputInfo(){
+  println("Slider sensor says : " + slider);
+  println("tap sensor says : " + tap);
+  println("Pressure sensor says : " + pressure);
+  println("Joystick sensor says : " + joyStickX + " | " + joyStickY);
+}
+  
